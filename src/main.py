@@ -1,5 +1,6 @@
 import argparse
-from src.data_cleaning import clean_orders
+from src.data_cleaning import clean_order_data
+from src.reporting import generate_basic_report
 
 
 def main():
@@ -8,7 +9,12 @@ def main():
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
-    clean_orders(args.input, args.output)
+    clean_order_data(args.input, args.output)
+
+    generate_basic_report(
+        "data/processed/orders_cleaned.csv",
+        "output/reports/summary.csv"
+    )
 
 
 if __name__ == "__main__":

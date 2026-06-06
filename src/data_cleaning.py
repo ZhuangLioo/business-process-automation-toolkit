@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 
-def clean_orders(input_path: str, output_path: str):
+def clean_order_data(input_path: str, output_path: str):
     print(f"[clean] reading: {input_path}")
     df = pd.read_csv(input_path)
 
