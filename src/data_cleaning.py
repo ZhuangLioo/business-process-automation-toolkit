@@ -1,5 +1,3 @@
-# v0.1 basic cleaning
-
 from pathlib import Path
 import pandas as pd
 
@@ -8,10 +6,10 @@ def clean_order_data(input_path: str, output_path: str):
     print(f"[clean] reading: {input_path}")
     df = pd.read_csv(input_path)
 
-    # 标准化列名
+    # Standardise column names: lowercase, snake_case, trimmed
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-    # 统一日期
+    # Normalise mixed date formats into ISO YYYY-MM-DD
     df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce", dayfirst=True)
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

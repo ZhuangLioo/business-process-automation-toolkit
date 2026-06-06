@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 
 
-def generate_basic_report(input_path, output_path):
+def generate_basic_report(input_path: str, output_path: str):
     print("[report] loading cleaned data...")
 
     df = pd.read_csv(input_path)
@@ -15,7 +15,7 @@ def generate_basic_report(input_path, output_path):
         "value": [total_orders, total_revenue]
     })
 
-    # ✅ 关键：确保输出目录存在
+    # Ensure output directory exists before writing
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
     print("[report] saving summary...")

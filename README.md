@@ -62,12 +62,16 @@ One command produces a cleaned dataset and a summary report ready for review.
 | 1003     | 2026/02/03  |                      | Heat Shrink Tube | 3        | 8.0        | Pending   |
 | 1004     | 2026-02-04  | Sydney Wholesale     | Cable Joint      |          | 12.5       | Completed |
 
-**Cleaned output** (`data/processed/orders_cleaned.csv`):
+**Cleaned output** (`data/processed/orders_cleaned.csv`) — column names normalised, all date formats unified, all rows preserved (missing values kept visible rather than silently dropped or filled):
 
-| order_id | order_date | customer_name | product          | quantity | unit_price | status    |
-|----------|------------|---------------|------------------|----------|------------|-----------|
-| 1001     | 2026-02-01 | Acme Pty Ltd  | Cable Joint      | 10.0     | 12.5       | Completed |
-| 1002     | 2026-02-01 | Blue Mountain | Heat Shrink Tube | 5.0      | 8.0        | Completed |
+| order_id | order_date | customer_name        | product          | quantity | unit_price | total_amount | status    |
+|----------|------------|----------------------|------------------|----------|------------|--------------|-----------|
+| 1001     | 2026-02-01 | Acme Pty Ltd         | Cable Joint      | 10.0     | 12.5       | 125.0        | Completed |
+| 1002     | 2026-02-01 | Blue Mountain Trading| Heat Shrink Tube | 5.0      | 8.0        | 40.0         | Completed |
+| 1003     | 2026-02-03 |                      | Heat Shrink Tube | 3.0      | 8.0        | 24.0         | Pending   |
+| 1004     | 2026-02-04 | Sydney Wholesale     | Cable Joint      |          | 12.5       |              | Completed |
+| 1005     | 2026-02-04 | Acme Pty Ltd         | Cable Joint      | 2.0      | 12.5       | 25.0         | Cancelled |
+| 1006     | 2026-02-05 | North Shore Supplies | Heat Shrink Tube | 1.0      | 8.0        | 8.0          | Completed |
 
 **Summary report** (`output/reports/summary.csv`):
 
@@ -81,9 +85,8 @@ One command produces a cleaned dataset and a summary report ready for review.
 ## Tech Stack
 
 - Python 3
-- pandas — data manipulation
-- openpyxl — Excel I/O
-- matplotlib — chart generation (planned)
+- pandas — data manipulation and date normalisation
+- python-dateutil — flexible date parsing (used via pandas)
 
 ---
 
@@ -111,8 +114,11 @@ One command produces a cleaned dataset and a summary report ready for review.
 pip install -r requirements.txt
 python -m src.main \
     --input data/raw/orders_sample.csv \
-    --output data/processed/orders_cleaned.csv
+    --output data/processed/orders_cleaned.csv \
+    --report output/reports/summary.csv
 ```
+
+`--report` is optional and defaults to `output/reports/summary.csv`.
 
 ---
 
@@ -130,4 +136,4 @@ python -m src.main \
 - Supplier concentration analysis
 - Procurement cost breakdown by category
 - Abnormal cost pattern detection
-- Excel report export with charts
+- Excel report export with charts (will reintroduce `openpyxl` and `matplotlib` when implemented)
