@@ -98,12 +98,14 @@ One command produces a cleaned dataset and a summary report ready for review.
 │   ├── main.py            # CLI entry point
 │   ├── data_cleaning.py   # column + date normalisation
 │   └── reporting.py       # summary metrics
+├── tests/                 # pytest suite for cleaning + reporting rules
 ├── data/
 │   ├── raw/               # sample input
 │   └── processed/         # cleaned output
 ├── output/
 │   └── reports/           # summary reports
-└── requirements.txt
+├── requirements.txt
+└── requirements-dev.txt   # adds pytest for running the test suite
 ```
 
 ---
@@ -122,11 +124,25 @@ python -m src.main \
 
 ---
 
+## Tests
+
+Core cleaning and reporting rules are covered by a small `pytest` suite:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/ -v
+```
+
+The tests lock the documented business rules into executable form — for example, `completed_revenue` is asserted to equal `173.0` on the canonical sample, so a later change that accidentally includes `Pending` or `Cancelled` rows will fail loudly.
+
+---
+
 ## What This Project Demonstrates
 
 - Translating a real operational pain point (manual Excel reconciliation) into a small, focused tool
 - Defensive data handling: preserving missing values, normalising inconsistent formats without losing information
 - Clear separation of concerns — cleaning, reporting, and CLI entry kept independent
+- Business rules captured as tests so regressions are caught automatically
 - Reproducible workflow with sanitised sample data so the project can be demoed end-to-end
 
 ---
