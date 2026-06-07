@@ -2,6 +2,17 @@ from pathlib import Path
 import pandas as pd
 
 
+REQUIRED_COLUMNS = ("order_date", "status", "quantity", "unit_price")
+
+
+def _validate_columns(df: pd.DataFrame) -> None:
+    missing = sorted(set(REQUIRED_COLUMNS) - set(df.columns))
+    if missing:
+        raise ValueError(
+            f"Missing required columns: {', '.join(missing)}"
+        )
+
+
 def _parse_order_date(value):
     # Source CSVs mix ISO dates ("2026-02-01") with Australian day-first dates
     # ("01/02/2026", "04-02-2026"). A single `dayfirst` setting cannot serve
@@ -22,6 +33,8 @@ def clean_order_data(input_path: str, output_path: str):
 
     # Standardise column names: lowercase, snake_case, trimmed
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+    _validate_columns(df)
 
     df["order_date"] = df["order_date"].apply(_parse_order_date)
 

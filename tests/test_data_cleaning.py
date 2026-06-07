@@ -1,5 +1,6 @@
 """Tests for src.data_cleaning — column normalisation and date parsing."""
 import pandas as pd
+import pytest
 
 from src.data_cleaning import clean_order_data
 
@@ -47,3 +48,23 @@ def test_mixed_date_formats_are_normalised_to_iso(tmp_path):
     assert cleaned.loc[0, "order_date"] == "2026-02-01"
     assert cleaned.loc[1, "order_date"] == "2026-02-01"
     assert cleaned.loc[2, "order_date"] == "2026-02-04"
+
+
+def test_missing_required_columns_raises_clear_error(tmp_path):
+    # CSV is missing order_date, status, quantity, unit_price — only the
+    # ID and customer columns are present, which a real "messy export"
+    # might look like before the data team adds the right fields.
+    bad_csv = "Order ID,Customer Name\n1001,Acme Pty Ltd\n"
+    input_path = tmp_path / "bad.csv"
+    output_path = tmp_path / "out.csv"
+    input_path.write_text(bad_csv)
+
+    with pytest.raises(ValueError) as excinfo:
+        clean_order_data(str(input_path), str(output_path))
+
+    msg = str(excinfo.value)
+    # All four missing columns should be listed (alphabetical), not just the first
+    assert "order_date" in msg
+    assert "status" in msg
+    assert "quantity" in msg
+    assert "unit_price" in msg
