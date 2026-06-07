@@ -47,3 +47,14 @@ def test_completed_revenue_excludes_pending_and_cancelled(tmp_path):
     # Total:              = 173
     # Pending (1003 → 24) and Cancelled (1005 → 25) are excluded.
     assert metrics["completed_revenue"] == 173.0
+
+
+def test_data_quality_metrics_count_invalid_and_missing_values(tmp_path):
+    metrics = _run_pipeline(tmp_path)
+    # On the canonical sample:
+    #   - All 6 dates parse cleanly via the mixed-format router
+    #   - Row 1003 has no customer name
+    #   - Row 1004 has no quantity
+    assert metrics["invalid_order_date_count"] == 0
+    assert metrics["missing_customer_name_count"] == 1
+    assert metrics["missing_quantity_count"] == 1
