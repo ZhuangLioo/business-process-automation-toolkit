@@ -8,11 +8,12 @@ def generate_basic_report(input_path: str, output_path: str):
     df = pd.read_csv(input_path)
 
     total_orders = len(df)
-    total_revenue = (df["quantity"].fillna(0) * df["unit_price"].fillna(0)).sum()
+    completed = df[df["status"].str.strip().str.lower() == "completed"]
+    completed_revenue = (completed["quantity"].fillna(0) * completed["unit_price"].fillna(0)).sum()
 
     summary = pd.DataFrame({
-        "metric": ["total_orders", "total_revenue"],
-        "value": [total_orders, total_revenue]
+        "metric": ["total_orders", "completed_revenue"],
+        "value": [total_orders, completed_revenue]
     })
 
     # Ensure output directory exists before writing

@@ -75,10 +75,10 @@ One command produces a cleaned dataset and a summary report ready for review.
 
 **Summary report** (`output/reports/summary.csv`):
 
-| metric         | value |
-|----------------|-------|
-| total_orders   | 6     |
-| total_revenue  | 222.0 |
+| metric             | value |
+|--------------------|-------|
+| total_orders       | 6     |
+| completed_revenue  | 173.0 |
 
 ---
 
