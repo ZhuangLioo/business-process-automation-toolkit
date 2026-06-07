@@ -46,8 +46,8 @@ One command produces a cleaned dataset and a summary report ready for review.
 
 **Reporting** (`src/reporting.py`)
 - Computes total order count
-- Computes completed-order revenue (`quantity × unit_price` for `status == "Completed"`, handling missing values)
-- Surfaces data quality counts (invalid dates, missing customer names, missing quantities) so problems are visible instead of hidden
+- Computes completed-order revenue (`quantity × unit_price` for `status == "Completed"`, with dirty Excel-style values like `$12.50` and `1,200` coerced to numbers before multiplying)
+- Surfaces data quality counts — invalid dates, missing customer names, missing quantities, and unparseable numeric values — so problems are visible instead of hidden
 - Outputs a clean `summary.csv` for management review
 
 ---
@@ -83,6 +83,8 @@ One command produces a cleaned dataset and a summary report ready for review.
 | invalid_order_date_count     | 0     |
 | missing_customer_name_count  | 1     |
 | missing_quantity_count       | 1     |
+| invalid_quantity_count       | 0     |
+| invalid_unit_price_count     | 0     |
 
 ---
 

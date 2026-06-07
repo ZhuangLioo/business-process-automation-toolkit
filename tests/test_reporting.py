@@ -55,6 +55,58 @@ def test_data_quality_metrics_count_invalid_and_missing_values(tmp_path):
     #   - All 6 dates parse cleanly via the mixed-format router
     #   - Row 1003 has no customer name
     #   - Row 1004 has no quantity
+    #   - All quantity / unit_price values are valid numbers
     assert metrics["invalid_order_date_count"] == 0
     assert metrics["missing_customer_name_count"] == 1
     assert metrics["missing_quantity_count"] == 1
+    assert metrics["invalid_quantity_count"] == 0
+    assert metrics["invalid_unit_price_count"] == 0
+
+
+def test_invalid_dates_are_counted_in_data_quality_metrics(tmp_path):
+    # Replaces the canonical sample with one row that has a bad date —
+    # without this test, invalid_order_date_count is only ever proved to
+    # produce 0, not to actually increment when the data is dirty.
+    bad_dates = (
+        "Order ID,order_date,Customer Name,Product,Quantity,unit_price,Total Amount,Status\n"
+        "1001,2026-02-01,Acme,Cable Joint,10,12.5,125,Completed\n"
+        "1002,not-a-date,Acme,Cable Joint,5,12.5,62.5,Completed\n"
+    )
+    raw = tmp_path / "orders.csv"
+    cleaned = tmp_path / "cleaned.csv"
+    summary = tmp_path / "summary.csv"
+    raw.write_text(bad_dates)
+    clean_order_data(str(raw), str(cleaned))
+    generate_basic_report(str(cleaned), str(summary))
+
+    metrics = pd.read_csv(summary).set_index("metric")["value"]
+    assert metrics["invalid_order_date_count"] == 1
+
+
+def test_dirty_numeric_values_are_parsed_or_counted_as_invalid(tmp_path):
+    # Real Excel exports contain "$12.50", "1,200", whitespace, and "N/A".
+    # Values that can be cleaned must contribute to revenue; values that
+    # genuinely can't be parsed must be surfaced as invalid_*_count.
+    dirty_numbers = (
+        "Order ID,order_date,Customer Name,Product,Quantity,unit_price,Total Amount,Status\n"
+        "1001,2026-02-01,Acme,A,10,\"$12.50\",125,Completed\n"      # parseable currency
+        "1002,2026-02-02,Acme,A,\"1,000\",8,8000,Completed\n"        # comma thousands
+        "1003,2026-02-03,Acme,A,abc,8,,Completed\n"                  # invalid quantity
+        "1004,2026-02-04,Acme,A,5,xyz,,Completed\n"                  # invalid unit_price
+    )
+    raw = tmp_path / "orders.csv"
+    cleaned = tmp_path / "cleaned.csv"
+    summary = tmp_path / "summary.csv"
+    raw.write_text(dirty_numbers)
+    clean_order_data(str(raw), str(cleaned))
+    generate_basic_report(str(cleaned), str(summary))
+
+    metrics = pd.read_csv(summary).set_index("metric")["value"]
+    # Row 1001: 10 × 12.50  =  125
+    # Row 1002: 1000 × 8    = 8000
+    # Rows 1003, 1004:        unparseable operand → contributes 0 to revenue
+    # ---------------------------------------------------------------------
+    # Total                 = 8125
+    assert metrics["completed_revenue"] == 8125.0
+    assert metrics["invalid_quantity_count"] == 1
+    assert metrics["invalid_unit_price_count"] == 1
