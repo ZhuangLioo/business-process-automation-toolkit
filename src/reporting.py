@@ -8,7 +8,8 @@ def generate_basic_report(input_path: str, output_path: str):
     df = pd.read_csv(input_path)
 
     total_orders = len(df)
-    completed = df[df["status"].str.strip().str.lower() == "completed"]
+    status = df["status"].fillna("").astype(str).str.strip().str.lower()
+    completed = df[status == "completed"]
     completed_revenue = (completed["quantity"].fillna(0) * completed["unit_price"].fillna(0)).sum()
 
     summary = pd.DataFrame({
