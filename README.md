@@ -50,6 +50,21 @@ One command produces a cleaned dataset and a summary report ready for review.
 - Surfaces data quality counts — invalid dates, missing customer names, missing quantities, and unparseable numeric values — so problems are visible instead of hidden
 - Outputs a clean `summary.csv` for management review
 
+**Data quality issues report** (`src/data_quality.py`)
+
+The summary report answers *"how many problems are in this batch?"*. But the question the data team actually has on Monday morning is *"which rows do I need to go fix?"*. A count of `missing_customer_name_count = 12` doesn't help a data steward triage — they need to know **which 12 orders**.
+
+`data_issues.csv` answers that. Every detected problem is listed on its own row with:
+
+- `row_number` — position of the order in the source file
+- `order_id` — the business identifier, so the issue can be matched back to the source system without re-reading the CSV
+- `issue_type` — `missing_customer_name`, `invalid_order_date`, `invalid_quantity`, etc.
+- `column` — which field the problem is in
+- `value` — the raw value that failed (preserved verbatim so you can see *what* the source actually contained)
+- `message` — a human-readable description for non-technical readers
+
+The result is a file a BA or data steward can open in Excel, filter by `issue_type`, and immediately start working through — no need to re-run the pipeline or rebuild a pivot table.
+
 ---
 
 ## Sample Input / Output
@@ -86,6 +101,13 @@ One command produces a cleaned dataset and a summary report ready for review.
 | invalid_quantity_count       | 0     |
 | invalid_unit_price_count     | 0     |
 
+**Per-row data issues** (`output/reports/data_issues.csv`) — what the summary numbers `missing_customer_name_count = 1` and `missing_quantity_count = 1` *actually mean* in terms of which orders need a follow-up:
+
+| row_number | order_id | issue_type             | column         | value | message                    |
+|------------|----------|------------------------|----------------|-------|----------------------------|
+| 3          | 1003     | missing_customer_name  | customer_name  |       | Customer name is missing   |
+| 4          | 1004     | missing_quantity       | quantity       |       | Quantity is missing        |
+
 ---
 
 ## Tech Stack
@@ -103,8 +125,9 @@ One command produces a cleaned dataset and a summary report ready for review.
 ├── src/
 │   ├── main.py            # CLI entry point
 │   ├── data_cleaning.py   # column + date normalisation
-│   └── reporting.py       # summary metrics
-├── tests/                 # pytest suite for cleaning + reporting rules
+│   ├── reporting.py       # summary metrics
+│   └── data_quality.py    # per-row data issues report (triage output)
+├── tests/                 # pytest suite for cleaning, reporting, and data quality
 ├── data/
 │   ├── raw/               # sample input
 │   └── processed/         # cleaned output
@@ -123,23 +146,24 @@ pip install -r requirements.txt
 python -m src.main \
     --input data/raw/orders_sample.csv \
     --output data/processed/orders_cleaned.csv \
-    --report output/reports/summary.csv
+    --report output/reports/summary.csv \
+    --issues output/reports/data_issues.csv
 ```
 
-`--report` is optional and defaults to `output/reports/summary.csv`.
+Both `--report` and `--issues` are optional and default to `output/reports/summary.csv` and `output/reports/data_issues.csv` respectively. A single run produces three artifacts: the cleaned dataset, the KPI summary, and the per-row issues file.
 
 ---
 
 ## Tests
 
-Core cleaning and reporting rules are covered by a small `pytest` suite:
+Cleaning, reporting, and data quality rules are covered by a `pytest` suite:
 
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest tests/ -v
 ```
 
-The tests lock the documented business rules into executable form — for example, `completed_revenue` is asserted to equal `173.0` on the canonical sample, so a later change that accidentally includes `Pending` or `Cancelled` rows will fail loudly.
+The tests lock the documented business rules into executable form — for example, `completed_revenue` is asserted to equal `173.0` on the canonical sample, so a later change that accidentally includes `Pending` or `Cancelled` rows will fail loudly. Likewise, `data_issues.csv` is asserted to list the *specific* `order_id`s (1003, 1004) that need follow-up on the canonical sample, so the per-row triage output can't silently lose rows.
 
 ---
 
@@ -147,7 +171,8 @@ The tests lock the documented business rules into executable form — for exampl
 
 - Translating a real operational pain point (manual Excel reconciliation) into a small, focused tool
 - Defensive data handling: preserving missing values, normalising inconsistent formats without losing information
-- Clear separation of concerns — cleaning, reporting, and CLI entry kept independent
+- Clear separation of concerns — cleaning, KPI reporting, and data quality output kept in independent modules
+- **Output designed for the actual end user**: a BA / data steward gets both summary counts (for management) and a per-row issues file (for triage), not just one or the other
 - Business rules captured as tests so regressions are caught automatically
 - Reproducible workflow with sanitised sample data so the project can be demoed end-to-end
 
