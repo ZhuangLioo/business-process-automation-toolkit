@@ -71,6 +71,20 @@ def generate_data_issues_report(
     normalise_columns(raw_df)  # so raw_df["order_date"] works regardless of source casing
     cleaned_df = pd.read_csv(cleaned_input_path).reset_index(drop=True)
 
+    # Position-alignment guard. Raw value lookup uses raw_df.iloc[position]
+    # while iterating cleaned_df, which relies on the invariant that cleaning
+    # preserves all rows in original order. If a future change to
+    # clean_order_data() adds filtering (e.g. drop cancelled), sorting, or
+    # deduplication, that invariant breaks silently — the issues file would
+    # attach the wrong raw value and order_id to the wrong row. Fail fast
+    # here so the bug surfaces at run time, not in a steward's triage queue.
+    if len(raw_df) != len(cleaned_df):
+        raise ValueError(
+            f"Row count mismatch between raw input ({len(raw_df)} rows) and "
+            f"cleaned output ({len(cleaned_df)} rows); cannot align raw values "
+            f"to cleaned rows for issue reporting."
+        )
+
     has_customer_name = "customer_name" in cleaned_df.columns
     has_order_id = "order_id" in cleaned_df.columns
 

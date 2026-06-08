@@ -1,5 +1,6 @@
 """Tests for src.data_quality — per-row data issues export."""
 import pandas as pd
+import pytest
 
 from src.data_cleaning import clean_order_data
 from src.data_quality import generate_data_issues_report
@@ -76,6 +77,33 @@ def test_dirty_dates_and_numbers_emit_correct_issue_types(tmp_path):
     assert bad_qty["value"] == "abc"
     bad_price = issues[issues["issue_type"] == "invalid_unit_price"].iloc[0]
     assert bad_price["value"] == "xyz"
+
+
+def test_row_count_mismatch_between_raw_and_cleaned_raises_clear_error(tmp_path):
+    # Guards against future regressions in clean_order_data: if cleaning ever
+    # starts filtering / sorting / deduplicating rows, raw-vs-cleaned position
+    # alignment breaks silently and issues would be attached to the wrong row.
+    # The function must refuse to run instead of producing a misleading file.
+    raw_two_rows = (
+        "Order ID,order_date,Customer Name,Product,Quantity,unit_price,Status\n"
+        "1001,2026-02-01,Acme,Cable,10,12.5,Completed\n"
+        "1002,2026-02-02,Acme,Cable,5,12.5,Completed\n"
+    )
+    cleaned_one_row = (
+        "order_id,order_date,customer_name,product,quantity,unit_price,status\n"
+        "1001,2026-02-01,Acme,Cable,10,12.5,Completed\n"
+    )
+    raw = tmp_path / "raw.csv"
+    cleaned = tmp_path / "cleaned.csv"
+    issues = tmp_path / "issues.csv"
+    raw.write_text(raw_two_rows)
+    cleaned.write_text(cleaned_one_row)
+
+    with pytest.raises(ValueError) as excinfo:
+        generate_data_issues_report(str(raw), str(cleaned), str(issues))
+
+    msg = str(excinfo.value)
+    assert "2" in msg and "1" in msg  # both row counts surfaced in the message
 
 
 def test_invalid_date_preserves_raw_string_from_source_file(tmp_path):
