@@ -1,6 +1,8 @@
 from pathlib import Path
 import pandas as pd
 
+from src.data_cleaning import NUMERIC_NOISE_PATTERN
+
 
 def _count_blank(series: pd.Series) -> int:
     """Count rows where the value is NaN or whitespace-only."""
@@ -9,9 +11,10 @@ def _count_blank(series: pd.Series) -> int:
 
 def _to_number(series: pd.Series) -> pd.Series:
     # Real-world Excel exports contain things like "$12.50", "1,200", "  ", "N/A".
-    # Strip currency / thousands separators / whitespace, then coerce; anything
-    # still unparseable becomes NaN so the caller can either fill or count it.
-    cleaned = series.fillna("").astype(str).str.replace(r"[$,\s]", "", regex=True)
+    # Strip the same noise characters src.data_quality uses for invalid detection
+    # (so revenue and the invalid_*_count metrics can't disagree about what's a
+    # valid number), then coerce; anything still unparseable becomes NaN.
+    cleaned = series.fillna("").astype(str).str.replace(NUMERIC_NOISE_PATTERN, "", regex=True)
     return pd.to_numeric(cleaned, errors="coerce")
 
 

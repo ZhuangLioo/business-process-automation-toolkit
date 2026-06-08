@@ -1,8 +1,23 @@
 from pathlib import Path
+import re
+
 import pandas as pd
 
 
 REQUIRED_COLUMNS = ("order_date", "status", "quantity", "unit_price")
+
+# Characters that real Excel exports leave in numeric cells: currency symbols,
+# thousands separators, and any whitespace (regular space, tab, non-breaking
+# space, etc.). Stripped before attempting to parse a number. Shared between
+# src.reporting (which coerces for revenue) and src.data_quality (which uses
+# the same definition of "noise" to decide what counts as an invalid number),
+# so the two modules can never silently diverge on what they accept.
+NUMERIC_NOISE_PATTERN = re.compile(r"[$,\s]")
+
+
+def normalise_columns(df: pd.DataFrame) -> None:
+    """Lowercase / snake_case / trim column names in place."""
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
 
 def _validate_columns(df: pd.DataFrame) -> None:
@@ -31,8 +46,7 @@ def clean_order_data(input_path: str, output_path: str):
     print(f"[clean] reading: {input_path}")
     df = pd.read_csv(input_path)
 
-    # Standardise column names: lowercase, snake_case, trimmed
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    normalise_columns(df)
 
     _validate_columns(df)
 

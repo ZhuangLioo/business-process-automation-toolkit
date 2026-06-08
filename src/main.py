@@ -22,7 +22,10 @@ def main():
 
     clean_order_data(args.input, args.output)
     generate_basic_report(args.output, args.report)
-    generate_data_issues_report(args.output, args.issues)
+    # data_quality needs the raw input too — it reaches back to recover the
+    # original date string for any row that failed to parse, so the issues
+    # report can show "31-Feb-2026" instead of just an empty cell.
+    generate_data_issues_report(args.input, args.output, args.issues)
 
 
 if __name__ == "__main__":

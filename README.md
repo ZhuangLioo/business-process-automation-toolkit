@@ -30,10 +30,14 @@ The operations team ends up spending hours every week reconciling spreadsheets i
 
 **After** — BPAT:
 ```bash
-python -m src.main --input data/raw/orders_sample.csv --output data/processed/orders_cleaned.csv
+python -m src.main \
+    --input data/raw/orders_sample.csv \
+    --output data/processed/orders_cleaned.csv \
+    --report output/reports/summary.csv \
+    --issues output/reports/data_issues.csv
 ```
 
-One command produces a cleaned dataset and a summary report ready for review.
+One command produces three artifacts ready for review: a cleaned dataset, a KPI summary, and a per-row data issues file. See [How to Run](#how-to-run) for flag defaults.
 
 ---
 
@@ -60,7 +64,7 @@ The summary report answers *"how many problems are in this batch?"*. But the que
 - `order_id` — the business identifier, so the issue can be matched back to the source system without re-reading the CSV
 - `issue_type` — `missing_customer_name`, `invalid_order_date`, `invalid_quantity`, etc.
 - `column` — which field the problem is in
-- `value` — the raw value that failed (preserved verbatim so you can see *what* the source actually contained)
+- `value` — the raw value that failed, preserved verbatim. For an invalid date that becomes `NaT` during cleaning, the cleaned CSV no longer holds the original string — so `data_quality.py` reads the **raw input file** alongside the cleaned one and reaches back to recover the exact text the user typed (e.g. `"31-Feb-2026"` or `"tba"`). Knowing the source string is what lets the steward see the *pattern* — typos vs free-text entries vs format confusion — rather than just "this cell was bad."
 - `message` — a human-readable description for non-technical readers
 
 The result is a file a BA or data steward can open in Excel, filter by `issue_type`, and immediately start working through — no need to re-run the pipeline or rebuild a pivot table.
@@ -69,7 +73,7 @@ The result is a file a BA or data steward can open in Excel, filter by `issue_ty
 
 ## Sample Input / Output
 
-**Input** (`data/raw/orders_sample.csv`):
+**Input** (`data/raw/orders_sample.csv`) — six rows that deliberately exercise messy real-world conditions: mixed date formats (ISO + day-first), inconsistent column casing, missing customer name (row 1003), missing quantity (row 1004), plus a Pending and a Cancelled row to test the revenue rule:
 
 | Order ID | order_date  | Customer Name        | Product          | Quantity | unit_price | Status    |
 |----------|-------------|----------------------|------------------|----------|------------|-----------|
@@ -77,6 +81,8 @@ The result is a file a BA or data steward can open in Excel, filter by `issue_ty
 | 1002     | 01/02/2026  | Blue Mountain Trading| Heat Shrink Tube | 5        | 8.0        | Completed |
 | 1003     | 2026/02/03  |                      | Heat Shrink Tube | 3        | 8.0        | Pending   |
 | 1004     | 2026-02-04  | Sydney Wholesale     | Cable Joint      |          | 12.5       | Completed |
+| 1005     | 04-02-2026  | Acme Pty Ltd         | Cable Joint      | 2        | 12.5       | Cancelled |
+| 1006     | 2026-02-05  | North Shore Supplies | Heat Shrink Tube | 1        | 8.0        | Completed |
 
 **Cleaned output** (`data/processed/orders_cleaned.csv`) — column names normalised, all date formats unified, all rows preserved (missing values kept visible rather than silently dropped or filled):
 

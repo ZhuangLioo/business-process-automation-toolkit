@@ -22,7 +22,7 @@ def _run(tmp_path, raw_csv):
     issues = tmp_path / "issues.csv"
     raw.write_text(raw_csv)
     clean_order_data(str(raw), str(cleaned))
-    generate_data_issues_report(str(cleaned), str(issues))
+    generate_data_issues_report(str(raw), str(cleaned), str(issues))
     return pd.read_csv(issues)
 
 
@@ -76,3 +76,26 @@ def test_dirty_dates_and_numbers_emit_correct_issue_types(tmp_path):
     assert bad_qty["value"] == "abc"
     bad_price = issues[issues["issue_type"] == "invalid_unit_price"].iloc[0]
     assert bad_price["value"] == "xyz"
+
+
+def test_invalid_date_preserves_raw_string_from_source_file(tmp_path):
+    # Regression test for a real bug: cleaning converts bad dates to NaT, so
+    # the cleaned CSV only has an empty cell where the bad date used to be.
+    # If data_quality reads only the cleaned file, the `value` column for an
+    # invalid_order_date issue becomes empty — which silently breaks the
+    # README's promise that raw failing values are preserved verbatim.
+    # data_quality must reach back into the raw input to recover the original
+    # string so the steward knows *what* the source actually contained.
+    dirty_dates = (
+        "Order ID,order_date,Customer Name,Product,Quantity,unit_price,Status\n"
+        "1001,2026-02-01,Acme,Cable,10,12.5,Completed\n"
+        "1002,31-Feb-2026,Acme,Cable,5,12.5,Completed\n"
+        "1003,tba,Acme,Cable,3,12.5,Completed\n"
+    )
+    issues = _run(tmp_path, dirty_dates)
+
+    date_issues = issues[issues["issue_type"] == "invalid_order_date"]
+    raw_values = set(date_issues["value"].tolist())
+    # Both unparseable strings must appear verbatim in the issues file
+    assert "31-Feb-2026" in raw_values
+    assert "tba" in raw_values
